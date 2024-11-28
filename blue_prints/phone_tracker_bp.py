@@ -43,6 +43,23 @@ def count_connected_devices_route():
       print(f"error in GET /api/phone_tracker/count_connected_devices   {e}")
       return jsonify({"error": "internal server error"}), 500
 
+@phone_tracker_bp.route("/phone_tracker/check_if_close", methods=['GET'])
+def check_if_close_route():
+   data = request.get_json()
+   if not data.get('source_id') or not data.get('target_id'):
+      return jsonify({"error": "you have to provide source_id and target_id"}), 400
+   if data['source_id']== data['target_id']:
+      return jsonify({"error": "a node is always close to itself "}), 400
+   try:
+      are_close = check_if_close(neo4j_driver, data['source_id'], data['target_id'])
+      return jsonify({"result": are_close}), 200
+   except Exception as e:
+      print(f"error in GET /api/phone_tracker/check_if_close {e}")
+      return jsonify({"error": "internal server error"}), 500
+
+
+
+
 
 
 

@@ -61,6 +61,22 @@ def count_connected_devices(driver, source_id):
         result = session.run(query, {'source_id':source_id})
         return str(result.single()['neighbors_count'])
 
+def check_if_close(driver, source_id, target_id):
+    query = """
+            match (source : Device {device_id: $source_id})
+            -[c:CONNECTED*5]-
+            (target : Device {device_id: $target_id})
+            return source limit 1
+            """
+    with driver.session() as session:
+        result = session.run(query, {'source_id':source_id, "target_id": target_id })
+        if result.single():
+            return True
+        return False
+
+
+
+
 
 
 
