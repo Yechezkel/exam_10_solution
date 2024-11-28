@@ -57,6 +57,17 @@ def check_if_close_route():
       print(f"error in GET /api/phone_tracker/check_if_close {e}")
       return jsonify({"error": "internal server error"}), 500
 
+@phone_tracker_bp.route("/phone_tracker/get_interaction_sorted_by_time", methods=['GET'])
+def get_interaction_sorted_by_time_route():
+   data = request.get_json()
+   if not data.get('source_id'):
+      return jsonify({"error": "you have to provide source_id"}), 400
+   try:
+      result = get_interaction_sorted_by_time(neo4j_driver, data['source_id'])
+      return jsonify({"result": result}), 200
+   except Exception as e:
+      print(f"error in GET /api/phone_tracker/get_interaction_sorted_by_time  {e}")
+      return jsonify({"error": "internal server error"}), 500
 
 
 

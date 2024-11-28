@@ -1,7 +1,4 @@
-# from datetime import datetime
 import uuid
-
-
 
 def record_interaction(driver, interaction_data):
     query = """
@@ -13,11 +10,11 @@ def record_interaction(driver, interaction_data):
             version: $version,
             signal_strength_dbm: $signal_strength_dbm,
             distance_meters: $distance_meters,
-            duration_seconds: $duration_seconds
+            duration_seconds: $duration_seconds,
+            timestamp: $timestamp
         }]->(target)
         RETURN c.interaction_id as interaction_id
         """
-    # timestamp: $timestamp
     query_data = {
             'source_id': interaction_data["devices"][0]['id'],
             'source_brand': interaction_data["devices"][0]['brand'],
@@ -35,7 +32,7 @@ def record_interaction(driver, interaction_data):
             "signal_strength_dbm": interaction_data["interaction"]['signal_strength_dbm'],
             "distance_meters": interaction_data["interaction"]['distance_meters'],
             "duration_seconds": interaction_data["interaction"]['duration_seconds'],
-            # "timestamp": interaction_data["interaction"]['timestamp'], todo: to convert the time ino str
+            "timestamp": interaction_data["interaction"]['timestamp']
     }
     with driver.session() as session:
         result = session.run(query, query_data)
@@ -74,50 +71,18 @@ def check_if_close(driver, source_id, target_id):
             return True
         return False
 
-
-
-
-
-
-
-
-
-# def get_transaction(driver, transaction_id):
-#     query = """
-#         MATCH (s:Account)-[t:TRANSACTION {transaction_id: $transaction_id}]->(tar:Account)
-#         RETURN s.account_id as source_id,
-#             tar.account_id as target_id,
-#             t.amount as amount,
-#             t.timestamp as timestamp,
-#             t.currency as currency
-#         """
-#     with driver.session() as session:
-#         result = session.run(query, {'transaction_id': transaction_id})
-#         transaction = result.single()
-#         if transaction:
-#             transaction = dict(transaction)
-#             transaction['timestamp'] = str(transaction['timestamp'])
-#             return transaction
-#         return None
-#
-#
-# def search_transactions(driver, query_data):
-#     query = """
-#         MATCH (s:Account)-[t:TRANSACTION]->(tar:Account)
-#         WHERE t.timestamp >= datetime($start_date)
-#         AND t.timestamp <= datetime($end_date)
-#         AND t.amount >= $amount
-#         RETURN s.account_id as source_id,
-#             tar.account_id as target_id,
-#             t.amount as amount,
-#             t.timestamp as timestamp,
-#             t.currency as currency
-#         """
-#     query_data['start_date'] = datetime.strptime(query_data['start_date'], '%d/%m/%Y, %H:%M:%S')
-#     query_data['end_date'] = datetime.strptime(query_data['end_date'], '%d/%m/%Y, %H:%M:%S')
-#     with driver.session() as session:
-#         result = session.run(query, query_data)
-#         transactions = [dict(transaction) for transaction in result]
-#         for transaction in transactions:
-#             transaction['timestamp'] = str(transaction['timestamp'])
-#         return transactions
+def get_interaction_sorted_by_time(driver, source_id):
+    query = """
+        call() {
+            match (a:Device{device_id:$source_id})-[c:CONNECTED]->(b:Device)
+            return a.device_id as source_id, b.device_id as target_id, c.timestamp as timestamp, c.interaction_id as interation_id
+            union
+            match (a:Device) -[c:CONNECTED]-> (b:Device{device_id: $source_id})
+            return a.device_id as source_id, b.device_id as target_id, c.timestamp as timestamp, c.interaction_id as interation_id 
+        }
+        return source_id, target_id, timestamp, interation_id
+        order by timestamp
+    """
+    with driver.session() as session:
+        result = session.run(query, {"source_id": source_id})
+        return [dict(interaction) for interaction in result]
